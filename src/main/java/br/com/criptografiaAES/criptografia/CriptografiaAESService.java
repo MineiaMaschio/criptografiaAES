@@ -2,6 +2,7 @@ package br.com.criptografiaAES.criptografia;
 
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -109,7 +110,11 @@ public class CriptografiaAESService {
 		return i;
 	}
 
-	public static List<List<Integer>> expansaoChave(String chave) {
+	public static String toHex(String arg) throws UnsupportedEncodingException {
+		return String.format("0x%x", new BigInteger(1, arg.getBytes("UTF-8")));
+	}
+
+	public static List<List<Integer>> expansaoChave(String chave) throws UnsupportedEncodingException {
 		// Seperar a chave por virgula
 		String[] separadoVirgula = chave.split(",");
 
@@ -118,15 +123,8 @@ public class CriptografiaAESService {
 
 		// Transformar a lista de string para inteiros
 		for (String s : separadoVirgula) {
-			inteiros.add(Integer.parseInt(s));
-		}
-
-		// Lista de string para valor em hexadecimal
-		List<String> listEmHex = new ArrayList<>();
-
-		// Tranformar inteiros em valor hexadecimal
-		for (Integer int1 : inteiros) {
-			listEmHex.add(Integer.toHexString(int1));
+			inteiros.add(Integer.decode(toHex(s)));
+			// System.out.println(Integer.decode(toHex(s)));
 		}
 
 		// Criar matriz 4x43
@@ -139,11 +137,11 @@ public class CriptografiaAESService {
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
 				roundKey0[j][i] = inteiros.get(contatdor);
-				// String.format("0x%s ", listEmHex.get(contatdor));
-				System.out.println(Integer.toHexString(roundKey0[j][i]));
+				// System.out.println(String.format("0x%s ",
+				// Integer.toHexString(roundKey0[j][i])));
 				contatdor++;
 			}
-			System.out.println(" ");
+			// System.out.println(" ");
 		}
 
 		// Adicionar o roundKey0 ao keySchedule
@@ -173,16 +171,18 @@ public class CriptografiaAESService {
 			// Adiciona lista da ultima posição
 			newKey.addAll(keySchedule.get(i));
 
-			// Rotacionar
-			Collections.rotate(newKey, 3);
+			if ((i + 1) % 4 == 0) {
+				// Rotacionar
+				Collections.rotate(newKey, 3);
 
-			// Substituir palavra seguindo tabela S-Box
-			newKey = SBox.substituicao(newKey);
+				// Substituir palavra seguindo tabela S-Box
+				newKey = SBox.substituicao(newKey);
 
-			// XOR w e roundConstant
-			for (int j = 0; j < newKey.size(); j++) {
-				int xor = newKey.get(j) ^ roundConstant.get(retornaposicaoRoundConstant(i)).get(j);
-				newKey.set(j, xor);
+				// XOR w e roundConstant
+				for (int j = 0; j < newKey.size(); j++) {
+					int xor = newKey.get(j) ^ roundConstant.get(retornaposicaoRoundConstant(i)).get(j);
+					newKey.set(j, xor);
+				}
 			}
 
 			// XOR w e primeira palavra da roundKey anterior
@@ -195,41 +195,217 @@ public class CriptografiaAESService {
 			keySchedule.add(newKey);
 		}
 
+		// System.out.println("\n Rounds Key");
+		// for (List<Integer> list : keySchedule) {
+		// for (Integer int1 : list) {
+		// System.out.println(String.format("0x%s ", Integer.toHexString(int1)) + " ");
+		// }
+		// System.out.println(" ");
+		// }
+
 		return keySchedule;
 	}
 
-	public static void cifragem(String text, List<List<Integer>> roundKeys) {
+	public static void adicionarNaLista(List<Integer> lista, List<Integer> valoresAAdicionar) {
+		for (Integer hex : valoresAAdicionar) {
+			lista.add(hex);
+		}
+	}
+	
+	//private static Integer validaZeroOuUm(Integer integer) {
+	//	if (integer == 49) {
+	//		
+	//	}
+	//}
 
-		// Lista de string para valor em hexadecimal
-		List<String> listEmHex = new ArrayList<>();
-		
-		char[] arrayChar = text.toCharArray();
-		for (char c : arrayChar) {
-			listEmHex.add(Integer.toHexString((int) c));
+	private static Integer validarValorMáximo(Integer shiftRow, Integer multiplicacao) {
+		if (shiftRow == 1) {
+			return TabelaL.substituicao(multiplicacao);
+		}
+		if (shiftRow == 0) {
+			return 0;
+		}
+		if (TabelaL.substituicao(multiplicacao) == 0) {
+			return 0;
+		}
+		Integer soma = shiftRow + TabelaL.substituicao(multiplicacao);
+		if (soma > 255) {
+			return 255;
+		}	
+		return soma;
+	}
+	
+	private static Integer validar0e1(Integer r1, Integer multiplicacao) {
+		Integer p1 = validarValorMáximo(r1, multiplicacao);
+		Integer soma = TabelaE.substituicao(p1);
+		if (soma == 1) {
+			return p1;
+		}
+		return soma;
+	}
+	
+	public static void cifragem(String text, List<List<Integer>> roundKeys) throws NumberFormatException, UnsupportedEncodingException {
+		int contador = 1;
+
+		// Seperar texto por caracter
+		String[] separadoCadaCaracter = text.split("");
+
+		// Lista de inteiros
+		List<Integer> textInInteger = new ArrayList<>();
+
+		// Transformar a lista de string para inteiros
+		for (String s : separadoCadaCaracter) {
+			textInInteger.add(Integer.decode(toHex(s)));
 		}
 
-		// Criar matriz 4x43
-		int[][] roundKey0 = new int[4][4];
+		// Gravar roundKeys em lista para gerenciar melhor
+		List<Integer> roundkey0 = new ArrayList<>();
+		List<Integer> roundkey1 = new ArrayList<>();
+		List<Integer> roundkey2 = new ArrayList<>();
+		List<Integer> roundkey3 = new ArrayList<>();
+		List<Integer> roundkey4 = new ArrayList<>();
+		List<Integer> roundkey5 = new ArrayList<>();
+		List<Integer> roundkey6 = new ArrayList<>();
+		List<Integer> roundkey7 = new ArrayList<>();
+		List<Integer> roundkey8 = new ArrayList<>();
+		List<Integer> roundkey9 = new ArrayList<>();
+		List<Integer> roundkey10 = new ArrayList<>();
 
-		// Variavel para contage,
-		int contador = 0;
-
-		// Adicionar lista de hexadecimais na matriz
-		for (int i = 0; i < 4; i++) {
-			for (int j = 0; j < 4; j++) {
-				roundKey0[j][i] = Integer.parseInt(String.valueOf(listEmHex.get(contador)), 16);
-				// String.format("0x%s ", listEmHex.get(contatdor));
-				System.out.println(roundKey0[j][i]);
-				contador++;
+		// Adicionar roundkeys na sua respectiva lista
+		for (List<Integer> list : roundKeys) {
+			if (contador >= 1 && contador <= 4) {
+				adicionarNaLista(roundkey0, list);
 			}
-			System.out.println(" ");
+			if (contador >= 5 && contador <= 8) {
+				adicionarNaLista(roundkey1, list);
+			}
+			if (contador >= 9 && contador <= 12) {
+				adicionarNaLista(roundkey2, list);
+			}
+			if (contador >= 13 && contador <= 16) {
+				adicionarNaLista(roundkey3, list);
+			}
+			if (contador >= 17 && contador <= 20) {
+				adicionarNaLista(roundkey4, list);
+			}
+			if (contador >= 21 && contador <= 24) {
+				adicionarNaLista(roundkey5, list);
+			}
+			if (contador >= 25 && contador <= 28) {
+				adicionarNaLista(roundkey6, list);
+			}
+			if (contador >= 29 && contador <= 32) {
+				adicionarNaLista(roundkey7, list);
+			}
+			if (contador >= 33 && contador <= 36) {
+				adicionarNaLista(roundkey8, list);
+			}
+			if (contador >= 37 && contador <= 40) {
+				adicionarNaLista(roundkey9, list);
+			}
+			if (contador >= 41 && contador <= 44) {
+				adicionarNaLista(roundkey10, list);
+			}
+			contador++;
 		}
 		
-		System.out.println(Integer.toHexString(roundKeys.get(0).get(0)));
-		System.out.println(Integer.toHexString(roundKeys.get(0).get(1)));
-		System.out.println(Integer.toHexString(roundKeys.get(0).get(2)));
-		System.out.println(Integer.toHexString(roundKeys.get(0).get(3)));
+		List<Integer> matriz = new ArrayList<>();
+
+		//AddRoundeKey - Round 0
+		for (int h = 0; h < textInInteger.size(); h++) {
+			int xor = textInInteger.get(h) ^ roundkey0.get(h);
+			matriz.add(xor);
+		}
 		
+		//Subbytes
+		matriz = SBox.substituicao(matriz);
+		
+		//ShiftRows
+		List<Integer> matrizShiftRows = new ArrayList<>();
+		
+		matrizShiftRows.add(matriz.get(0));
+		matrizShiftRows.add(matriz.get(5));
+		matrizShiftRows.add(matriz.get(10));
+		matrizShiftRows.add(matriz.get(15));
+		matrizShiftRows.add(matriz.get(4));
+		matrizShiftRows.add(matriz.get(9));
+		matrizShiftRows.add(matriz.get(14));
+		matrizShiftRows.add(matriz.get(3));
+		matrizShiftRows.add(matriz.get(8));
+		matrizShiftRows.add(matriz.get(13));
+		matrizShiftRows.add(matriz.get(2));
+		matrizShiftRows.add(matriz.get(7));
+		matrizShiftRows.add(matriz.get(12));
+		matrizShiftRows.add(matriz.get(1));
+		matrizShiftRows.add(matriz.get(6));
+		matrizShiftRows.add(matriz.get(11));
+		
+		
+		//Mix Columns
+		List<Integer> matrizEtapa4 = new ArrayList<>();
+		
+		for (Integer integer : matrizShiftRows) {
+			matrizEtapa4.add(TabelaL.substituicao(integer));
+		}
+		
+		contador = 0;
+		int b1 = 0;
+		int b2 = 0;
+		int b3 = 0;
+		int b4 = 0;
+		
+		int b5 = 0;
+		int b6 = 0;
+		int b7 = 0;
+		int b8 = 0;
+
+		int b9 = 0;
+		int b10 = 0;
+		int b11 = 0;
+		int b12 = 0;
+
+		int b13 = 0;
+		int b14 = 0;
+		int b15 = 0;
+		int b16 = 0;
+
+		b1 = TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(0), 2)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(1), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(2)) ^ TabelaE.substituicao(matrizEtapa4.get(3));
+		b2 = TabelaE.substituicao(matrizEtapa4.get(0)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(1), 2)) ^ TabelaE.substituicao(validarValorMáximo( matrizEtapa4.get(2), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(3));
+		b3 = TabelaE.substituicao(matrizEtapa4.get(0)) ^ TabelaE.substituicao(matrizEtapa4.get(1)) ^ TabelaE.substituicao(validarValorMáximo( matrizEtapa4.get(2), 2)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(3), 3));
+		b4 = TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(0), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(1)) ^ TabelaE.substituicao(matrizEtapa4.get(2)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(3), 2));
+			
+		b5 = TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(4), 2)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(5) , 3)) ^ TabelaE.substituicao(matrizEtapa4.get(6)) ^ TabelaE.substituicao(matrizEtapa4.get(7));
+		b6 = TabelaE.substituicao(matrizEtapa4.get(4)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(5), 2)) ^ TabelaE.substituicao(validarValorMáximo( matrizEtapa4.get(6), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(7));
+		b7 = TabelaE.substituicao(matrizEtapa4.get(4)) ^ TabelaE.substituicao(matrizEtapa4.get(5)) ^ TabelaE.substituicao(validarValorMáximo( matrizEtapa4.get(6), 2)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(7), 3));
+		b8 = TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(4), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(5)) ^ TabelaE.substituicao(matrizEtapa4.get(6)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(7), 2));
+		
+		b9 = TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(8), 2)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(9), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(10)) ^ TabelaE.substituicao(matrizEtapa4.get(11));
+		b10 = TabelaE.substituicao(matrizEtapa4.get(8)) ^ 255 ^ TabelaE.substituicao(validarValorMáximo( matrizEtapa4.get(10), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(11));
+		b11 = TabelaE.substituicao(matrizEtapa4.get(8)) ^ TabelaE.substituicao(matrizEtapa4.get(9)) ^ TabelaE.substituicao(validarValorMáximo( matrizEtapa4.get(10), 2)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(11), 3));
+		b12 = TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(8), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(9)) ^ TabelaE.substituicao(matrizEtapa4.get(10)) ^ 255;
+		
+		b13 = validar0e1(matrizEtapa4.get(12), 2) ^ validar0e1(matrizEtapa4.get(13), 3) ^ TabelaE.substituicao(matrizEtapa4.get(14)) ^ TabelaE.substituicao(matrizEtapa4.get(15));
+		b14 = TabelaE.substituicao(matrizEtapa4.get(12)) ^ validar0e1(matrizEtapa4.get(13), 2) ^ validar0e1(matrizEtapa4.get(14), 3) ^ TabelaE.substituicao(matrizEtapa4.get(15));
+		b15 = TabelaE.substituicao(matrizEtapa4.get(12)) ^ TabelaE.substituicao(matrizEtapa4.get(13)) ^ validar0e1(matrizEtapa4.get(14), 2) ^ validar0e1(matrizEtapa4.get(15), 3);
+		b16 = validar0e1(matrizEtapa4.get(12), 3) ^ TabelaE.substituicao(matrizEtapa4.get(13)) ^ TabelaE.substituicao(matrizEtapa4.get(14)) ^ validar0e1(matrizEtapa4.get(15), 2);
+		
+		System.out.println("\n");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b1)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b2)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b3)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b4)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b5)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b6)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b7)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b8)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b9)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b10)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b11)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b12)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b13)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b14)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b15)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(b16)) + " ");
 	}
 
 }
