@@ -244,6 +244,26 @@ public class CriptografiaAESService {
 		return soma;
 	}
 	
+	private static Integer teste(Integer r, Integer multiplicacao) {
+		if (r == 0 || multiplicacao == 0) {
+			return 0;
+		} else {
+			if (r == 1) {
+				return multiplicacao;
+			} else if (multiplicacao == 1) {
+				return r;
+			}
+		}
+		
+		Integer resultado = TabelaL.substituicao(r) + TabelaL.substituicao(multiplicacao);
+		
+		if (resultado > 255) {
+			return 255;
+		}
+		
+		return TabelaE.substituicao(resultado);
+	}
+	
 	public static void cifragem(String text, List<List<Integer>> roundKeys) throws NumberFormatException, UnsupportedEncodingException {
 		int contador = 1;
 
@@ -377,7 +397,7 @@ public class CriptografiaAESService {
 		b5 = TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(4), 2)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(5) , 3)) ^ TabelaE.substituicao(matrizEtapa4.get(6)) ^ TabelaE.substituicao(matrizEtapa4.get(7));
 		b6 = TabelaE.substituicao(matrizEtapa4.get(4)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(5), 2)) ^ TabelaE.substituicao(validarValorMáximo( matrizEtapa4.get(6), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(7));
 		b7 = TabelaE.substituicao(matrizEtapa4.get(4)) ^ TabelaE.substituicao(matrizEtapa4.get(5)) ^ TabelaE.substituicao(validarValorMáximo( matrizEtapa4.get(6), 2)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(7), 3));
-		b8 = TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(4), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(5)) ^ TabelaE.substituicao(matrizEtapa4.get(6)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(7), 2));
+		b8 = TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(4), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(5)) ^ TabelaE.substituicao(matrizEtapa4.get(2)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(3), 2));
 		
 		b9 = TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(8), 2)) ^ TabelaE.substituicao(validarValorMáximo(matrizEtapa4.get(9), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(10)) ^ TabelaE.substituicao(matrizEtapa4.get(11));
 		b10 = TabelaE.substituicao(matrizEtapa4.get(8)) ^ 255 ^ TabelaE.substituicao(validarValorMáximo( matrizEtapa4.get(10), 3)) ^ TabelaE.substituicao(matrizEtapa4.get(11));
@@ -388,6 +408,26 @@ public class CriptografiaAESService {
 		b14 = TabelaE.substituicao(matrizEtapa4.get(12)) ^ validar0e1(matrizEtapa4.get(13), 2) ^ validar0e1(matrizEtapa4.get(14), 3) ^ TabelaE.substituicao(matrizEtapa4.get(15));
 		b15 = TabelaE.substituicao(matrizEtapa4.get(12)) ^ TabelaE.substituicao(matrizEtapa4.get(13)) ^ validar0e1(matrizEtapa4.get(14), 2) ^ validar0e1(matrizEtapa4.get(15), 3);
 		b16 = validar0e1(matrizEtapa4.get(12), 3) ^ TabelaE.substituicao(matrizEtapa4.get(13)) ^ TabelaE.substituicao(matrizEtapa4.get(14)) ^ validar0e1(matrizEtapa4.get(15), 2);
+		
+		Integer t = teste(matrizShiftRows.get(0), 2) ^ teste(matrizShiftRows.get(1), 3) ^ teste(matrizShiftRows.get(2), 1) ^ teste(matrizShiftRows.get(3), 1); 
+		Integer t1 = teste(matrizShiftRows.get(0), 1) ^ teste(matrizShiftRows.get(1), 2) ^ teste(matrizShiftRows.get(2), 3) ^ teste(matrizShiftRows.get(3), 1); 
+		Integer t2 = teste(matrizShiftRows.get(0), 1) ^ teste(matrizShiftRows.get(1), 1) ^ teste(matrizShiftRows.get(2), 2) ^ teste(matrizShiftRows.get(3), 3); 
+		Integer t3 = teste(matrizShiftRows.get(0), 3) ^ teste(matrizShiftRows.get(1), 1) ^ teste(matrizShiftRows.get(2), 1) ^ teste(matrizShiftRows.get(3), 2); 
+		
+		Integer t4 = teste(matrizShiftRows.get(4), 2) ^ teste(matrizShiftRows.get(5), 3) ^ teste(matrizShiftRows.get(6), 1) ^ teste(matrizShiftRows.get(7), 1); 
+		Integer t5 = teste(matrizShiftRows.get(4), 1) ^ teste(matrizShiftRows.get(5), 2) ^ teste(matrizShiftRows.get(6), 3) ^ teste(matrizShiftRows.get(7), 1); 
+		Integer t6 = teste(matrizShiftRows.get(4), 1) ^ teste(matrizShiftRows.get(5), 1) ^ teste(matrizShiftRows.get(6), 2) ^ teste(matrizShiftRows.get(7), 3); 
+		Integer t7 = teste(matrizShiftRows.get(4), 3) ^ teste(matrizShiftRows.get(5), 1) ^ teste(matrizShiftRows.get(6), 1) ^ teste(matrizShiftRows.get(7), 2); 
+		
+		Integer t8 = teste(matrizShiftRows.get(8), 2) ^ teste(matrizShiftRows.get(9), 3) ^ teste(matrizShiftRows.get(10), 1) ^ teste(matrizShiftRows.get(11), 1); 
+		Integer t9 = teste(matrizShiftRows.get(8), 1) ^ teste(matrizShiftRows.get(9), 2) ^ teste(matrizShiftRows.get(10), 3) ^ teste(matrizShiftRows.get(11), 1); 
+		Integer t10 = teste(matrizShiftRows.get(8), 1) ^ teste(matrizShiftRows.get(9), 1) ^ teste(matrizShiftRows.get(10), 2) ^ teste(matrizShiftRows.get(11), 3); 
+		Integer t11 = teste(matrizShiftRows.get(8), 3) ^ teste(matrizShiftRows.get(9), 1) ^ teste(matrizShiftRows.get(10), 1) ^ teste(matrizShiftRows.get(11), 2); 
+		
+		Integer t12 = teste(matrizShiftRows.get(12), 2) ^ teste(matrizShiftRows.get(13), 3) ^ teste(matrizShiftRows.get(14), 1) ^ teste(matrizShiftRows.get(15), 1); 
+		Integer t13 = teste(matrizShiftRows.get(12), 1) ^ teste(matrizShiftRows.get(13), 2) ^ teste(matrizShiftRows.get(14), 3) ^ teste(matrizShiftRows.get(15), 1); 
+		Integer t14 = teste(matrizShiftRows.get(12), 1) ^ teste(matrizShiftRows.get(13), 1) ^ teste(matrizShiftRows.get(14), 2) ^ teste(matrizShiftRows.get(15), 3); 
+		Integer t15 = teste(matrizShiftRows.get(12), 3) ^ teste(matrizShiftRows.get(13), 1) ^ teste(matrizShiftRows.get(14), 1) ^ teste(matrizShiftRows.get(15), 2); 
 		
 		System.out.println("\n");
 		System.out.println(String.format("0x%s ", Integer.toHexString(b1)) + " ");
@@ -406,6 +446,23 @@ public class CriptografiaAESService {
 		System.out.println(String.format("0x%s ", Integer.toHexString(b14)) + " ");
 		System.out.println(String.format("0x%s ", Integer.toHexString(b15)) + " ");
 		System.out.println(String.format("0x%s ", Integer.toHexString(b16)) + " ");
+		System.out.println("\n");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t1)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t2)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t3)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t4)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t5)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t6)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t7)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t8)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t9)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t10)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t11)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t12)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t13)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t14)) + " ");
+		System.out.println(String.format("0x%s ", Integer.toHexString(t15)) + " ");
 	}
 
 }
