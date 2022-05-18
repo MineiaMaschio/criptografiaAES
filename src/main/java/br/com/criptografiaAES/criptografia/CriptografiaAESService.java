@@ -1,6 +1,7 @@
 package br.com.criptografiaAES.criptografia;
 
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
@@ -120,19 +121,21 @@ public class CriptografiaAESService {
 	}
 
 	public static String toHex(String arg) throws UnsupportedEncodingException {
-		return String.format("0x%x", new BigInteger(1, arg.getBytes("UTF-8")));
+		//String.format("0x%x", new BigInteger(1, arg.getBytes("UTF-8")));
+		int ch = arg.charAt(0);
+		return String.format("0x%s", Integer.toHexString(ch));
 	}
 
 	private static String asciiToHex(String asciiStr) {
-	    char[] chars = asciiStr.toCharArray();
-	    StringBuilder hex = new StringBuilder();
-	    for (char ch : chars) {
-	        hex.append(Integer.toHexString((int) ch));
-	    }
+		char[] chars = asciiStr.toCharArray();
+		StringBuilder hex = new StringBuilder();
+		for (char ch : chars) {
+			hex.append(Integer.toHexString((int) ch));
+		}
 
-	    return hex.toString();
+		return hex.toString();
 	}
-	
+
 	// Expansão da chave
 	public static List<List<Integer>> keyExpansion(String key) throws UnsupportedEncodingException {
 		// Seperar a chave por virgula
@@ -222,12 +225,6 @@ public class CriptografiaAESService {
 		return keySchedule;
 	}
 
-	public static void adicionarNaLista(List<Integer> lista, List<Integer> valoresAAdicionar) {
-		for (Integer hex : valoresAAdicionar) {
-			lista.add(hex);
-		}
-	}
-
 	private static Integer galois(Integer r, Integer multiplicacao) {
 		if (r == 0 || multiplicacao == 0) {
 			return 0;
@@ -250,16 +247,111 @@ public class CriptografiaAESService {
 
 	public static String convertStringToHex(String str) {
 
-        // display in uppercase
-        //char[] chars = Hex.encodeHex(str.getBytes(StandardCharsets.UTF_8), false);
+		// display in uppercase
+		// char[] chars = Hex.encodeHex(str.getBytes(StandardCharsets.UTF_8), false);
 
-        // display in lowercase, default
-        char[] chars = Hex.encodeHex(str.getBytes(StandardCharsets.UTF_8));
+		// display in lowercase, default
+		char[] chars = Hex.encodeHex(str.getBytes(StandardCharsets.UTF_8));
 
-        return String.valueOf(chars);
-    }
+		return String.valueOf(chars);
+	}
+
+	public static String padding(List<String> s) {
+		String ultimo = s.get(s.size() -1);
+		Integer valor = 16 - ultimo.length();
+		String nova = "";
+		for (int i = 0; i < valor; i++) {
+			if (i == valor - 1) {
+				nova += valor;
+			} else {
+				nova += valor + ",";
+			}
+		}
+		return nova;
+	}
+
+	public static String novoPadding() {
+		Integer valor = 16;
+		String nova = "";
+		for (int i = 0; i < valor; i++) {
+			if (i == valor - 1) {
+				nova += valor;
+			} else {
+				nova += valor + ",";
+			}
+		}
+		return nova;
+	}
+
+	public static String converterParaString(List<Integer> textInInteger) {
+		String p = "";
+		for (Integer integer : textInInteger) {
+			if (integer <= 15) {
+				p += String.format("%s", "0" + Integer.toHexString(integer));
+			} else {
+				p += String.format("%s", Integer.toHexString(integer));
+			}
+
+		}
+		return p;
+	}
+
+	public static void salvarResultado(String nomeArquivoDestino, String resultado) throws IOException {
+		// C:\Temp
+
+		FileWriter arq = new FileWriter("C:\\Temp\\" + nomeArquivoDestino + ".txt");
+		PrintWriter gravarArq = new PrintWriter(arq);
+
+		gravarArq.printf(resultado);
+		arq.close();
+	}
 	
-	public static List<Integer> encrypt(String text, List<List<Integer>> roundKeys, int t)
+	public static List<String> dividirStringEM16(String texto) {
+		String[] t1 = texto.split("");
+		List<String> list = new ArrayList<>();
+		String t2 = "";
+		int contador = 0;
+		for (String string : t1) {
+			if (contador < 15) {
+				t2 += string;
+				contador++;
+			} else if (contador == 15) {
+				t2 += string;
+				list.add(t2);  
+				contador = 0;
+				t2 = "";
+			}
+		}
+		if (t2 != "") {
+			list.add(t2);
+		}
+		return list;
+	}
+
+	public static String encrypt(String text, List<List<Integer>> roundkeys)
+			throws NumberFormatException, UnsupportedEncodingException {
+		List<String> s = dividirStringEM16(text);
+		String resultado = "";
+		String teste = "";
+		teste = padding(s);
+		for (int i = 0; i < s.size(); i++) {
+			if (i == s.size() - 1) {
+				if (teste == "") {
+					resultado += converterParaString(encrypt(s.get(i), roundkeys, ""));
+					resultado += converterParaString(encrypt("", roundkeys, novoPadding()));
+				} else {
+					resultado += converterParaString(encrypt(s.get(i), roundkeys, teste));
+				}
+
+			} else {
+				resultado += converterParaString(encrypt(s.get(i), roundkeys, ""));
+			}
+		}
+
+		return resultado;
+	}
+
+	public static List<Integer> encrypt(String text, List<List<Integer>> roundKeys, String padding)
 			throws NumberFormatException, UnsupportedEncodingException {
 		int contador = 1;
 
@@ -267,7 +359,8 @@ public class CriptografiaAESService {
 		List<Integer> textInInteger = new ArrayList<>();
 
 		String[] separadoCadaCaracter = null;
-		if (t == 0) {
+
+		if (text != "") {
 			// Seperar texto por caracter
 			separadoCadaCaracter = text.split("");
 
@@ -275,16 +368,23 @@ public class CriptografiaAESService {
 			for (String s : separadoCadaCaracter) {
 				textInInteger.add(Integer.decode(toHex(s)));
 			}
-		} else {
+		}
+
+		if (padding != "") {
 			// Seperar texto por caracter
-			separadoCadaCaracter = text.split(",");
+			separadoCadaCaracter = padding.split(",");
 
 			// Transformar a lista de string para inteiros
 			for (String s : separadoCadaCaracter) {
-				textInInteger.add(Integer.decode(convertStringToHex(s)));
+				textInInteger.add(Integer.decode(s));
 			}
 		}
 
+		System.out.println("\nInteiros");
+		for (Integer integer : textInInteger) {
+			System.out.println(String.format("0x%s ", Integer.toHexString(integer)) + "");
+		}
+		
 		List<Integer> matriz = new ArrayList<>();
 
 		int variavelFora = 0;
