@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -15,49 +13,36 @@ import java.util.List;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.commons.codec.binary.Hex;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CriptografiaAESService {
 
-	private static byte[] converterChave(String chave) {
-		byte[] key = null;
-		try {
-			key = chave.getBytes("UTF-8");
-			MessageDigest sha = MessageDigest.getInstance("SHA-1");
-			key = sha.digest(key);
-			key = Arrays.copyOf(key, 16);
-		} catch (Exception e) {
-			// TODO: handle exception
-		}
-		return key;
-	}
 
-	public static byte[] criptografar(byte[] textoCriptografar, String chave, String nomeArquivoDestino) {
+	//Utilizado para comparar resultados
+	public byte[] criptografarAPIJAVA(byte[] textoCriptografar, String nomeArquivoDestino) {
 		try {
 
-			byte[] keyValue = new byte[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
-					'P' };
+			byte[] chave = new byte[] {'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'};
 
-			SecretKeySpec key1 = new SecretKeySpec(keyValue, "AES");
+			SecretKeySpec chaveSecreta = new SecretKeySpec(chave, "AES");
 
-			Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+			Cipher cifra = Cipher.getInstance("AES/ECB/PKCS5Padding");
 
-			cipher.init(Cipher.ENCRYPT_MODE, key1);
+			cifra.init(Cipher.ENCRYPT_MODE, chaveSecreta);
 
-			byte[] encrypted = cipher.doFinal(textoCriptografar);
+			byte[] criptografado = cifra.doFinal(textoCriptografar);
 
 			// C:\Temp
 
 			FileWriter arq = new FileWriter("C:\\Temp\\" + nomeArquivoDestino + ".txt");
 			PrintWriter gravarArq = new PrintWriter(arq);
 
-			String hex = new BigInteger(1, encrypted).toString(16);
+			String hex = new BigInteger(1, criptografado).toString(16);
 			gravarArq.printf(hex);
 			arq.close();
 
-			return encrypted;
+			return criptografado;
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -65,19 +50,20 @@ public class CriptografiaAESService {
 		}
 	}
 
-	public static String decrypt(byte[] byteText, String chave) {
+	//Utilizado para comparar resultados
+	public String descriptografar(byte[] byteText) {
 		try {
 
-			byte[] keyValue = new byte[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
-					'P' };
-			SecretKeySpec key1 = new SecretKeySpec(keyValue, "AES");
+			byte[] chave = new byte[] {'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'};
+			SecretKeySpec chaveSecreta = new SecretKeySpec(chave, "AES");
 
-			Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+			Cipher cifra = Cipher.getInstance("AES/ECB/PKCS5Padding");
 
-			cipher.init(Cipher.DECRYPT_MODE, key1);
+			cifra.init(Cipher.DECRYPT_MODE, chaveSecreta);
 
-			byte[] decrypted = cipher.doFinal(byteText);
-			return new String(decrypted);
+			byte[] descriptografado = cifra.doFinal(byteText);
+			
+			return new String(descriptografado);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 			return null;
@@ -86,7 +72,7 @@ public class CriptografiaAESService {
 	}
 
 	// Retorna index para a lista RoundConstant
-	public static int retornaposicaoRoundConstant(int i) {
+	private int retornaposicaoRodadasConstantes(int i) {
 		if (i <= 6) {
 			return 0;
 		}
@@ -120,37 +106,32 @@ public class CriptografiaAESService {
 		return i;
 	}
 
-	public static String toHex(String arg) throws UnsupportedEncodingException {
-		//String.format("0x%x", new BigInteger(1, arg.getBytes("UTF-8")));
-		int ch = arg.charAt(0);
-		return String.format("0x%s", Integer.toHexString(ch));
-	}
-
-	private static String asciiToHex(String asciiStr) {
-		char[] chars = asciiStr.toCharArray();
-		StringBuilder hex = new StringBuilder();
-		for (char ch : chars) {
-			hex.append(Integer.toHexString((int) ch));
-		}
-
-		return hex.toString();
+	//Converter string para hexadecimal
+	private String toHex(String arg) throws UnsupportedEncodingException {
+		return String.format("0x%x", new BigInteger(1, arg.getBytes("UTF-8")));
 	}
 
 	// Expansão da chave
-	public static List<List<Integer>> keyExpansion(String key) throws UnsupportedEncodingException {
+	public List<List<Integer>> expansaoDaChave(String key) throws UnsupportedEncodingException {
 		// Seperar a chave por virgula
-		String[] commaSeparated = key.split(",");
+		String[] sepradoPorVirgula = key.split(",");
 
 		// Lista de inteiros
-		List<Integer> integers = new ArrayList<>();
+		List<Integer> inteiros = new ArrayList<>();
 
 		// Transformar a lista de string para inteiros
-		for (String s : commaSeparated) {
-			integers.add(Integer.decode(toHex(s)));
+		for (String s : sepradoPorVirgula) {
+			boolean integerOrNot2 = s.matches("-?\\d+");
+			
+			if (integerOrNot2) {
+				inteiros.add(Integer.decode(s));
+			} else {
+				inteiros.add(Integer.decode(toHex(s)));
+			}
 		}
 
 		// Criar matriz 4x43
-		int[][] roundKey0 = new int[4][4];
+		int[][] chaveRodada0 = new int[4][4];
 
 		// Variavel para contagem
 		int counter = 0;
@@ -158,109 +139,107 @@ public class CriptografiaAESService {
 		// Adicionar lista de hexadecimais na matriz
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
-				roundKey0[j][i] = integers.get(counter);
+				chaveRodada0[j][i] = inteiros.get(counter);
 				counter++;
 			}
 		}
 
 		// Adicionar o roundKey0 ao keySchedule
-		List<List<Integer>> keySchedule = new ArrayList<>();
-		keySchedule.add(Arrays.asList(roundKey0[0][0], roundKey0[1][0], roundKey0[2][0], roundKey0[3][0]));
-		keySchedule.add(Arrays.asList(roundKey0[0][1], roundKey0[1][1], roundKey0[2][1], roundKey0[3][1]));
-		keySchedule.add(Arrays.asList(roundKey0[0][2], roundKey0[1][2], roundKey0[2][2], roundKey0[3][2]));
-		keySchedule.add(Arrays.asList(roundKey0[0][3], roundKey0[1][3], roundKey0[2][3], roundKey0[3][3]));
+		List<List<Integer>> matrizDasChaves = new ArrayList<>();
+		matrizDasChaves.add(Arrays.asList(chaveRodada0[0][0], chaveRodada0[1][0], chaveRodada0[2][0], chaveRodada0[3][0]));
+		matrizDasChaves.add(Arrays.asList(chaveRodada0[0][1], chaveRodada0[1][1], chaveRodada0[2][1], chaveRodada0[3][1]));
+		matrizDasChaves.add(Arrays.asList(chaveRodada0[0][2], chaveRodada0[1][2], chaveRodada0[2][2], chaveRodada0[3][2]));
+		matrizDasChaves.add(Arrays.asList(chaveRodada0[0][3], chaveRodada0[1][3], chaveRodada0[2][3], chaveRodada0[3][3]));
 
 		// Lista roundConstant
-		List<List<Integer>> roundConstant = new ArrayList<>();
-		roundConstant.add(Arrays.asList(0x01, 0, 0, 0));
-		roundConstant.add(Arrays.asList(0x02, 0, 0, 0));
-		roundConstant.add(Arrays.asList(0x04, 0, 0, 0));
-		roundConstant.add(Arrays.asList(0x08, 0, 0, 0));
-		roundConstant.add(Arrays.asList(0x10, 0, 0, 0));
-		roundConstant.add(Arrays.asList(0x20, 0, 0, 0));
-		roundConstant.add(Arrays.asList(0x40, 0, 0, 0));
-		roundConstant.add(Arrays.asList(0x80, 0, 0, 0));
-		roundConstant.add(Arrays.asList(0x1B, 0, 0, 0));
-		roundConstant.add(Arrays.asList(0x36, 0, 0, 0));
+		List<List<Integer>> matrizRodadasConstantes = new ArrayList<>();
+		matrizRodadasConstantes.add(Arrays.asList(0x01, 0, 0, 0));
+		matrizRodadasConstantes.add(Arrays.asList(0x02, 0, 0, 0));
+		matrizRodadasConstantes.add(Arrays.asList(0x04, 0, 0, 0));
+		matrizRodadasConstantes.add(Arrays.asList(0x08, 0, 0, 0));
+		matrizRodadasConstantes.add(Arrays.asList(0x10, 0, 0, 0));
+		matrizRodadasConstantes.add(Arrays.asList(0x20, 0, 0, 0));
+		matrizRodadasConstantes.add(Arrays.asList(0x40, 0, 0, 0));
+		matrizRodadasConstantes.add(Arrays.asList(0x80, 0, 0, 0));
+		matrizRodadasConstantes.add(Arrays.asList(0x1B, 0, 0, 0));
+		matrizRodadasConstantes.add(Arrays.asList(0x36, 0, 0, 0));
 
 		for (int i = 3; i <= 42; i++) {
 			// Lista para nova chave
-			List<Integer> newKey = new ArrayList<>();
+			List<Integer> novaChave = new ArrayList<>();
 
 			// Adiciona lista da ultima posição
-			newKey.addAll(keySchedule.get(i));
+			novaChave.addAll(matrizDasChaves.get(i));
 
 			if ((i + 1) % 4 == 0) {
 				// Rotacionar
-				Collections.rotate(newKey, 3);
+				Collections.rotate(novaChave, 3);
 
 				// Substituir palavra seguindo tabela S-Box
-				newKey = SBox.substituicao(newKey);
+				novaChave = SBox.substituicao(novaChave);
 
 				// XOR w e roundConstant
-				for (int j = 0; j < newKey.size(); j++) {
-					int xor = newKey.get(j) ^ roundConstant.get(retornaposicaoRoundConstant(i)).get(j);
-					newKey.set(j, xor);
+				for (int j = 0; j < novaChave.size(); j++) {
+					int xor = novaChave.get(j) ^ matrizRodadasConstantes.get(retornaposicaoRodadasConstantes(i)).get(j);
+					novaChave.set(j, xor);
 				}
 			}
 
 			// XOR w e primeira palavra da roundKey anterior
-			for (int h = 0; h < newKey.size(); h++) {
-				int xor = newKey.get(h) ^ keySchedule.get(i - 3).get(h);
-				newKey.set(h, xor);
+			for (int h = 0; h < novaChave.size(); h++) {
+				int xor = novaChave.get(h) ^ matrizDasChaves.get(i - 3).get(h);
+				novaChave.set(h, xor);
 			}
 
 			// Adicionar nova chave a lista
-			keySchedule.add(newKey);
+			matrizDasChaves.add(novaChave);
 		}
 
-		// System.out.println("\n Rounds Key");
-		// for (List<Integer> list : keySchedule) {
-		// for (Integer int1 : list) {
-		// System.out.println(String.format("0x%s ", Integer.toHexString(int1)) + " ");
-		// }
-		// System.out.println(" ");
-		// }
-
-		return keySchedule;
+		return matrizDasChaves;
 	}
 
-	private static Integer galois(Integer r, Integer multiplicacao) {
+	//Parte da multiplicação de galois
+	private Integer galois(Integer r, Integer multiplicacao) {
+		//Se um dos termos for zero retorna zero
 		if (r == 0 || multiplicacao == 0) {
 			return 0;
 		} else {
+			//Se r é igual a 1 retorna multiplicacao
 			if (r == 1) {
 				return multiplicacao;
+			//Se multiplicacao é igual a 1 retorna r
 			} else if (multiplicacao == 1) {
 				return r;
 			}
 		}
 
+		//Substitui na tabela L o valor r e a multiplicacao e soma 
 		Integer resultado = TabelaL.substituicao(r) + TabelaL.substituicao(multiplicacao);
 
+		//Se o resultado for maior que 0xFF retorna a subtituicao na Tabela E com o valor do resultado menos 0xFF
 		if (resultado > 255) {
 			return TabelaE.substituicao(resultado - 255);
 		}
 
+		//Substitui o resultado na Tabela E
 		return TabelaE.substituicao(resultado);
 	}
 
-	public static String convertStringToHex(String str) {
 
-		// display in uppercase
-		// char[] chars = Hex.encodeHex(str.getBytes(StandardCharsets.UTF_8), false);
-
-		// display in lowercase, default
-		char[] chars = Hex.encodeHex(str.getBytes(StandardCharsets.UTF_8));
-
-		return String.valueOf(chars);
-	}
-
-	public static String padding(List<String> s) {
+	//Incluir o preenchimento com base no PKCS#5
+	private String preenhimento(List<String> s) {
+		//Pega o último bloco
 		String ultimo = s.get(s.size() -1);
-		Integer valor = 16 - ultimo.length();
+		
+		//Pega o valor que não está preenchido
+		Integer valor = 16 - (ultimo.length() / 2);
+		
+		//Variável para colocar o preeenchimento
 		String nova = "";
+		
+		//Enquanto i for menor que valor que não está preeenchido adiciona o número não preenchido
 		for (int i = 0; i < valor; i++) {
+			//Se for o último valor não adiciona virgula
 			if (i == valor - 1) {
 				nova += valor;
 			} else {
@@ -270,10 +249,17 @@ public class CriptografiaAESService {
 		return nova;
 	}
 
-	public static String novoPadding() {
+	//Incluir preenchimento total
+	private String novoPreenchimento() {
+		//Valor do preenchimento
 		Integer valor = 16;
+		
+		//Variável para colocar o preeenchimento
 		String nova = "";
+		
+		//Enquanto i for menor que valor que não está preeenchido adiciona o número não preenchido
 		for (int i = 0; i < valor; i++) {
+			//Se for o último valor não adiciona virgula
 			if (i == valor - 1) {
 				nova += valor;
 			} else {
@@ -283,9 +269,13 @@ public class CriptografiaAESService {
 		return nova;
 	}
 
-	public static String converterParaString(List<Integer> textInInteger) {
+	private String converterParaString(List<Integer> textInInteger) {
+		//Variável para colocar resultado
 		String p = "";
+		
+		//Percorrer lista de inteiros para converter para string
 		for (Integer integer : textInInteger) {
+			//Se inteiro for menor que 15 adicionar 0 junto
 			if (integer <= 15) {
 				p += String.format("%s", "0" + Integer.toHexString(integer));
 			} else {
@@ -296,9 +286,8 @@ public class CriptografiaAESService {
 		return p;
 	}
 
-	public static void salvarResultado(String nomeArquivoDestino, String resultado) throws IOException {
-		// C:\Temp
-
+	//Salvar reultado da criptografia em um arquivo na pasta Temp
+	public void salvarResultado(String nomeArquivoDestino, String resultado) throws IOException {
 		FileWriter arq = new FileWriter("C:\\Temp\\" + nomeArquivoDestino + ".txt");
 		PrintWriter gravarArq = new PrintWriter(arq);
 
@@ -306,123 +295,165 @@ public class CriptografiaAESService {
 		arq.close();
 	}
 	
-	public static List<String> dividirStringEM16(String texto) {
-		String[] t1 = texto.split("");
-		List<String> list = new ArrayList<>();
-		String t2 = "";
+	//Dividir string em blocos de 16
+	private List<String> dividirStringEM16(String texto) {
+		//Seperar por caracter
+		String[] listaCaracteres = texto.split("(?<=\\G.{2})");
+		
+		//Variável para adicionar resultado
+		List<String> listaResultado = new ArrayList<>();
+		
+		//Variável para adiconar resultado temporariamente
+		String s = "";
+		
+		//Variável para contagem
 		int contador = 0;
-		for (String string : t1) {
+		
+		//Percorrer lista de caracteres
+		for (String string : listaCaracteres) {
+			//Enquanto contador for menos que 15 adiciona na string temporária
 			if (contador < 15) {
-				t2 += string;
+				//Adicionar caracter na string temporária
+				s += string;
+				//Adicionar no contador
 				contador++;
+			//Se o contador for igual a 15 adiciona o bloco de 16 caracteres na lista
 			} else if (contador == 15) {
-				t2 += string;
-				list.add(t2);  
+				//Adicionar caracter na string temporária
+				s += string;
+				//Adiciona string temporária na lista 
+				listaResultado.add(s);  
+				//Zera contador
 				contador = 0;
-				t2 = "";
+				//Limpa string temporária
+				s = "";
 			}
 		}
-		if (t2 != "") {
-			list.add(t2);
+		//Se a string temporária não estiver vazia adiciona o resultado na lista
+		if (s != "") {
+			listaResultado.add(s);
 		}
-		return list;
+		
+		return listaResultado;
 	}
-
-	public static String encrypt(String text, List<List<Integer>> roundkeys)
+	
+	private String converterParaHexadecimal(String texto) throws UnsupportedEncodingException {
+		String stringHexadecimal = "";
+		for (int i = 0; i < texto.length(); i++) {
+			char s = texto.charAt(i);
+			String string = String.valueOf(s);
+			String hex = String.format("%x", new BigInteger(1, string.getBytes("UTF-8")));
+			if (hex.length() <= 1) {
+				hex =  String.format("0%s", hex);
+			}
+			stringHexadecimal += hex;
+		}
+		return stringHexadecimal;
+	}
+	
+	//Criptogarfar AES/ECB/PKCS#5
+	public String criptografar(String texto, List<List<Integer>> rodadasDasChaves)
 			throws NumberFormatException, UnsupportedEncodingException {
-		List<String> s = dividirStringEM16(text);
+		//Converter texto para hexadecimal
+		texto.length();
+		String textoHexadecimal = converterParaHexadecimal(texto);
+		textoHexadecimal.length();
+		//Dividir texto em blocos 
+		List<String> blocos = dividirStringEM16(textoHexadecimal);
+		
+		//Resultado da criptografia
 		String resultado = "";
-		String teste = "";
-		teste = padding(s);
-		for (int i = 0; i < s.size(); i++) {
-			if (i == s.size() - 1) {
-				if (teste == "") {
-					resultado += converterParaString(encrypt(s.get(i), roundkeys, ""));
-					resultado += converterParaString(encrypt("", roundkeys, novoPadding()));
+		
+		//Verificar preenchimento
+		String preenchimento = preenhimento(blocos);
+		
+		//Percorrer blocos
+		for (int i = 0; i < blocos.size(); i++) {
+			
+			//Se for o último bloco deve verificar preenchimento antes de criptografar
+			if (i == blocos.size() - 1) {
+				
+				//Se o preenchimento for igual a zero deve adicionar um bloco inteiro de preenchimento (16)
+				if (preenchimento == "") {
+					//Criptografar bloco de texto
+					resultado += converterParaString(criptografar(blocos.get(i), rodadasDasChaves, ""));
+					
+					//Criptografar preenchimento
+					resultado += converterParaString(criptografar("", rodadasDasChaves, novoPreenchimento()));
 				} else {
-					resultado += converterParaString(encrypt(s.get(i), roundkeys, teste));
+					resultado += converterParaString(criptografar(blocos.get(i), rodadasDasChaves, preenchimento));
 				}
 
 			} else {
-				resultado += converterParaString(encrypt(s.get(i), roundkeys, ""));
+				resultado += converterParaString(criptografar(blocos.get(i), rodadasDasChaves, ""));
 			}
 		}
 
 		return resultado;
 	}
 
-	public static List<Integer> encrypt(String text, List<List<Integer>> roundKeys, String padding)
+	
+	//Criptografar blocos
+	private List<Integer> criptografar(String texto, List<List<Integer>> rodadasDasChaves, String preenchimento)
 			throws NumberFormatException, UnsupportedEncodingException {
-		int contador = 1;
 
 		// Lista de inteiros
-		List<Integer> textInInteger = new ArrayList<>();
+		List<Integer> inteiros = new ArrayList<>();
 
+		//Separar caracteres
 		String[] separadoCadaCaracter = null;
 
-		if (text != "") {
+		
+		//Se texto for diferente de vazio então separa cada par de caracteres para converter para inteiro
+		if (texto != "") {
 			// Seperar texto por caracter
-			separadoCadaCaracter = text.split("");
+			separadoCadaCaracter = texto.split("(?<=\\G.{2})");
 
 			// Transformar a lista de string para inteiros
 			for (String s : separadoCadaCaracter) {
-				textInInteger.add(Integer.decode(toHex(s)));
+				inteiros.add(Integer.decode(String.format("0x%s", s)));
 			}
 		}
 
-		if (padding != "") {
+		//Se preenchimento for diferente de vazio então separa por virgula para converter para inteiro
+		if (preenchimento != "") {
 			// Seperar texto por caracter
-			separadoCadaCaracter = padding.split(",");
+			separadoCadaCaracter = preenchimento.split(",");
 
 			// Transformar a lista de string para inteiros
 			for (String s : separadoCadaCaracter) {
-				textInInteger.add(Integer.decode(s));
+				inteiros.add(Integer.decode(s));
 			}
-		}
-
-		System.out.println("\nInteiros");
-		for (Integer integer : textInInteger) {
-			System.out.println(String.format("0x%s ", Integer.toHexString(integer)) + "");
 		}
 		
+		//Matriz para aplicar passos
 		List<Integer> matriz = new ArrayList<>();
 
-		int variavelFora = 0;
+		//Index da chave 
+		int indexChave = 0;
+		
+		//Index do valor
 		int index = 0;
 
 		// AddRoundKey - Round 0
-		for (int i = 0; i < textInInteger.size(); i++) {
-			int xor = textInInteger.get(i) ^ roundKeys.get(variavelFora).get(index);
+		for (int i = 0; i < inteiros.size(); i++) {
+			int xor = inteiros.get(i) ^ rodadasDasChaves.get(indexChave).get(index);
 			matriz.add(xor);
+			
+			//Se o valor do indice for igual a 3 deve começar a contagem por zero de novo e aumentar index da chave
 			if (index != 0 && index % 3 == 0) {
 				index = 0;
-				variavelFora++;
+				indexChave++;
 			} else {
 				index++;
 			}
 		}
 
-		// System.out.println("\nRound keys");
-		// for (Integer integer : matriz) {
-		// System.out.println(String.format("0x%s ", Integer.toHexString(integer)) + "
-		// ");
-		// }
-
-		// AddRoundeKey - Round 0
-		// for (int h = 0; h < textInInteger.size(); h++) {
-		// int xor = textInInteger.get(h) ^ roundkey0.get(h);
-		// matriz.add(xor);
-		// }
-
+		//Percorrer 9 vezes 
 		for (int i = 0; i < 10; i++) {
+			
 			// Subbytes
 			matriz = SBox.substituicao(matriz);
-
-			// System.out.println("\nSubbytes");
-			// for (Integer integer : matriz) {
-			// System.out.println(String.format("0x%s ", Integer.toHexString(integer)) + "
-			// ");
-			// }
 
 			// ShiftRows
 			List<Integer> matrizShiftRows = new ArrayList<>();
@@ -444,22 +475,17 @@ public class CriptografiaAESService {
 			matrizShiftRows.add(matriz.get(6));
 			matrizShiftRows.add(matriz.get(11));
 
-			// System.out.println("\nMatriz ShiftRow");
-			// for (Integer integer : matrizShiftRows) {
-			// System.out.println(String.format("0x%s ", Integer.toHexString(integer)) + "
-			// ");
-			// }
-
+			//Se for a última rodada apenas adiciona a chave e não faz o mix columns
 			if (i == 9) {
 				matriz.clear();
 
 				// AddRoundKey
 				for (int i1 = 0; i1 < matrizShiftRows.size(); i1++) {
-					int xor = matrizShiftRows.get(i1) ^ roundKeys.get(variavelFora).get(index);
+					int xor = matrizShiftRows.get(i1) ^ rodadasDasChaves.get(indexChave).get(index);
 					matriz.add(xor);
 					if (index != 0 && index % 3 == 0) {
 						index = 0;
-						variavelFora++;
+						indexChave++;
 					} else {
 						index++;
 					}
@@ -468,50 +494,38 @@ public class CriptografiaAESService {
 			} else {
 
 				// Mix Columns
-				List<Integer> matrizEtapa4 = new ArrayList<>();
+				List<Integer> matrizMixColumns = new ArrayList<>();
 
-				contador = 0;
 				for (int i1 = 0; i1 < matrizShiftRows.size(); i1 += 4) {
-					matrizEtapa4.add(galois(matrizShiftRows.get(i1), 2) ^ galois(matrizShiftRows.get(i1 + 1), 3)
+					matrizMixColumns.add(galois(matrizShiftRows.get(i1), 2) ^ galois(matrizShiftRows.get(i1 + 1), 3)
 							^ galois(matrizShiftRows.get(i1 + 2), 1) ^ galois(matrizShiftRows.get(i1 + 3), 1));
-					matrizEtapa4.add(galois(matrizShiftRows.get(i1), 1) ^ galois(matrizShiftRows.get(i1 + 1), 2)
+					matrizMixColumns.add(galois(matrizShiftRows.get(i1), 1) ^ galois(matrizShiftRows.get(i1 + 1), 2)
 							^ galois(matrizShiftRows.get(i1 + 2), 3) ^ galois(matrizShiftRows.get(i1 + 3), 1));
-					matrizEtapa4.add(galois(matrizShiftRows.get(i1), 1) ^ galois(matrizShiftRows.get(i1 + 1), 1)
+					matrizMixColumns.add(galois(matrizShiftRows.get(i1), 1) ^ galois(matrizShiftRows.get(i1 + 1), 1)
 							^ galois(matrizShiftRows.get(i1 + 2), 2) ^ galois(matrizShiftRows.get(i1 + 3), 3));
-					matrizEtapa4.add(galois(matrizShiftRows.get(i1), 3) ^ galois(matrizShiftRows.get(i1 + 1), 1)
+					matrizMixColumns.add(galois(matrizShiftRows.get(i1), 3) ^ galois(matrizShiftRows.get(i1 + 1), 1)
 							^ galois(matrizShiftRows.get(i1 + 2), 1) ^ galois(matrizShiftRows.get(i1 + 3), 2));
 				}
-
-				// System.out.println("\nMaxi columns");
-				// for (Integer integer : matrizEtapa4) {
-				// System.out.println(String.format("0x%s ", Integer.toHexString(integer)) + "
-				// ");
-				// }
 
 				matriz.clear();
 
 				// AddRoundKey
-				for (int i1 = 0; i1 < matrizEtapa4.size(); i1++) {
-					int xor = matrizEtapa4.get(i1) ^ roundKeys.get(variavelFora).get(index);
+				for (int i1 = 0; i1 < matrizMixColumns.size(); i1++) {
+					int xor = matrizMixColumns.get(i1) ^ rodadasDasChaves.get(indexChave).get(index);
 					matriz.add(xor);
 					if (index != 0 && index % 3 == 0) {
 						index = 0;
-						variavelFora++;
+						indexChave++;
 					} else {
 						index++;
 					}
 				}
 
-				matrizEtapa4.clear();
+				matrizMixColumns.clear();
 				matrizShiftRows.clear();
 
 			}
 
-			// System.out.println("\nRound keys");
-			// for (Integer integer : matriz) {
-			// System.out.println(String.format("0x%s ", Integer.toHexString(integer)) + "
-			// ");
-			// }
 		}
 		return matriz;
 	}
